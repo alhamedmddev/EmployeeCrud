@@ -1,0 +1,56 @@
+﻿@page "/DeleteEmployee/{empId:int}"
+@using EmployeeCrud.Shared.ViewModel
+@inject NavigationManager NavigationManager
+@inject IHttpClientFactory _httpClientFactory;
+<h3>DeleteEmployee</h3>
+
+
+<div class="form-group">
+    <h4>Do you want to delete this user?</h4>
+    <table class="table">
+        <tbody>
+            <tr>
+                <td>Name</td>
+                <td>@employeeVM.FirstName +" "+ @employeeVM.LastName </td>
+            </tr>
+            <tr>
+                <td>Designation</td>
+                <td>@employeeVM.Designation</td>
+            </tr>
+            <tr>
+                <td>Cell No</td>
+                <td>@employeeVM.PhoneNo</td>
+            </tr>
+            <tr>
+                <td>E-mail</td>
+                <td>@employeeVM.Email</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div class="form-group">
+    <input type="submit" value="Delete" @onclick="(async () => await RemoveUser(employeeVM.Id))" class="btn btn-danger" />
+    <input type="submit" value="Cancel" @onclick="(() => Cancel())" class="btn btn-warning" />
+</div>
+
+@code {
+    [Parameter]
+    public int empId { get; set; }
+    protected string Title = "Add";
+    public EmployeeVM employeeVM = new();
+    protected override async Task OnInitializedAsync()
+    {
+        var httpClient = _httpClientFactory.CreateClient("Dot7Api");
+        employeeVM = await httpClient.GetFromJsonAsync<EmployeeVM>("/api/Employee/GetEmployeeID/" + Convert.ToInt32(empId));
+    }
+    protected async Task RemoveUser(int userID)
+    {
+        var httpClient = _httpClientFactory.CreateClient("Dot7Api");
+        await httpClient.DeleteAsync("api/Employee/DeleteEmployee/" + userID);
+        NavigationManager.NavigateTo("/EmployeeList");
+    }
+    void Cancel()
+    {
+        NavigationManager.NavigateTo("/EmployeeList");
+    }
+}

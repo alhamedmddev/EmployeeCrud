@@ -1,0 +1,116 @@
+﻿@layout EmptyLayout
+@page "/Login"
+@using EmployeeCrud.Client.Shared.Providers
+@using EmployeeCrud.Shared.ViewModel
+@using System.Text.Json
+@using System.Text
+@using System.Net
+@* @inject HttpClient httpClient *@
+@inject IHttpClientFactory _httpClientFactory;
+@inject ILocalStorageService _localstorageService;
+@inject AuthenticationStateProvider _authStateProvider;
+@inject NavigationManager _navigationManager;
+<h3>Login</h3>
+
+<style>
+    .headerr {
+        padding: 16px 8px;
+        text-align: center;
+        font-family: 'Times New Roman', Times, serif
+    }
+
+    .maincontainer {
+        display: block;
+        padding: 12px 6px;
+        border: 1px solid;
+        border-radius: 4px;
+        background-color: #efefef;
+    }
+</style>
+
+<div class="h-100 d-flex align-items-center justify-content-center">
+    <div class="col-md-5 maincontainer">
+        <div class="headerr">
+            <header>
+                <h3>LogIn</h3>
+            </header>
+        </div>
+        <div class="container">
+            <EditForm Model="@LoginVM" OnValidSubmit="LoginAsync">
+                <DataAnnotationsValidator />
+
+                 @if (!string.IsNullOrEmpty(APIErrorMessages))
+                {
+                   
+                        <p>@APIErrorMessages</p>
+
+                    
+                }
+
+                <div data-mdb-input-init class="form-outline mb-4">
+                    <input type="email" @bind-value="LoginVM.Email" class="form-control" placeholder="Email address" />
+
+                </div>
+                <ValidationMessage For="@(()=> LoginVM.Email)" />
+
+                <div data-mdb-input-init class="form-outline mb-4">
+                    <input type="password" @bind-value="LoginVM.Password" class="form-control" placeholder="Password" />
+                </div>
+                <ValidationMessage For="@(()=> LoginVM.Password)" />
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">LogIn</button>
+                </div>
+
+                <div class="text-center">
+                    <p>Already a member? <a href="Login">LogIn</a></p>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    protected LoginVM LoginVM = new();
+    string APIErrorMessages;
+
+    protected async Task LoginAsync()
+    {
+        var jsonPayload = JsonSerializer.Serialize(LoginVM);
+        var requestContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+          var httpClient = _httpClientFactory.CreateClient("Dot7Api");
+        var response = await httpClient.PostAsync("api/User/login", requestContent);
+
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var errors = await response.Content.ReadFromJsonAsync<Dictionary<string, List<string>>>();
+            if (errors.Count > 0)
+            {
+                foreach (var item in errors)
+                {
+                    foreach (var errorMessage in item.Value)
+                    {
+                        APIErrorMessages = $"{APIErrorMessages} | {errorMessage}";
+                    }
+                }
+            }
+        }
+        else if (response.StatusCode == HttpStatusCode.OK)
+        {
+            APIErrorMessages = "Login successfully";
+            //_navigationManager.NavigateTo("/registration-confirmation");
+            var tokenResponse = await response.Content.ReadFromJsonAsync<JWTTokenResponseVM>();
+            await _localstorageService.SetItemAsync<string>("jwt-access-token", tokenResponse.AccessToken);
+            // await _localStorageService.SetItemAsync<string>("jwt-access-token", tokenResponse.AccessToken);
+             (_authStateProvider as CustomAuthProvider).NotifyAuthState();
+             _navigationManager.NavigateTo("/EmployeeList");
+        }
+        else
+        {
+            APIErrorMessages = "Login Failed Plase try after some time";
+
+        }
+    }
+
+}

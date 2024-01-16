@@ -1,0 +1,124 @@
+﻿@layout EmptyLayout
+@page "/UserRegistration"
+@using EmployeeCrud.Shared.ViewModel
+@using System.Text.Json
+@using System.Text
+@using System.Net
+@inject HttpClient Http
+@inject IHttpClientFactory _httpClientFactory
+@inject NavigationManager _navigationManager;
+<h3>UserRegistration</h3>
+
+<style>
+    .headerr {
+        padding: 16px 8px;
+        text-align: center;
+        font-family: 'Times New Roman', Times, serif
+    }
+
+    .maincontainer {
+        display: block;
+        padding: 12px 6px;
+        border: 1px solid;
+        border-radius: 4px;
+        background-color: #efefef;
+    }
+</style>
+
+
+<div class="h-100 d-flex align-items-center justify-content-center">
+    <div class="col-md-5 maincontainer">
+        <div class="headerr">
+            <header>
+                <h3>User Registration</h3>
+            </header>
+        </div>
+        <div class="container">
+            <EditForm Model="@userVM" OnValidSubmit="SaveUser">
+                <DataAnnotationsValidator />
+
+                <!-- 2 column grid layout with text inputs for the first and last names -->
+                <div class="row mb-4">
+                    <div class="col">
+                        <div data-mdb-input-init class="form-outline">
+                            <input type="text" @bind-value="userVM.FirstName" class="form-control" placeholder="First name" />
+                        </div>
+                        <ValidationMessage For="@(()=> userVM.FirstName)" />
+                    </div>
+                    <div class="col">
+                        <div data-mdb-input-init class="form-outline">
+                            <input type="text" @bind-value="userVM.LastName" class="form-control" placeholder="Last name" />
+                        </div>
+                        <ValidationMessage For="@(()=> userVM.LastName)" />
+                    </div>
+                </div>
+
+                <div data-mdb-input-init class="form-outline mb-4">
+                    <input type="email" @bind-value="userVM.Email" class="form-control" placeholder="Email address" />
+
+                </div>
+                <ValidationMessage For="@(()=> userVM.Email)" />
+
+                <div data-mdb-input-init class="form-outline mb-4">
+                    <input type="password" @bind-value="userVM.Password" class="form-control" placeholder="Password" />
+                </div>
+                <ValidationMessage For="@(()=> userVM.Password)" />
+                <div data-mdb-input-init class="form-outline mb-4">
+                    <input type="password" @bind-value="userVM.ConfirmPassword" class="form-control" placeholder="Confirm Password" />
+                </div>
+                <ValidationMessage For="@(()=> userVM.ConfirmPassword)" />
+
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+                <!-- Submit button -->
+                @* <button type="submit" class="btn btn-primary btn-block mb-4">Sign up</button> *@
+
+                <!-- Register buttons -->
+
+                <div class="text-center">
+                    <p>Already a member? <a href="Login">LogIn</a></p>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    protected UserVM userVM = new();
+    string APIErrorMessages;
+    protected async Task SaveUser()
+    {
+        var jsonPayload = JsonSerializer.Serialize(userVM);
+        var requestContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+        var httpClient = _httpClientFactory.CreateClient("Dot7Api");
+        var response = await httpClient.PostAsJsonAsync("/api/user/register", userVM);
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var errors = await response.Content.ReadFromJsonAsync<Dictionary<string, List<string>>>();
+            if (errors.Count > 0)
+            {
+                foreach (var item in errors)
+                {
+                    foreach (var errorMessage in item.Value)
+                    {
+                        APIErrorMessages = $"{APIErrorMessages} | {errorMessage}";
+                    }
+                }
+            }
+        }
+        else if (response.StatusCode == HttpStatusCode.OK)
+        {
+            _navigationManager.NavigateTo("/registration-confirmation");
+        }
+        else
+        {
+            APIErrorMessages = "Failed to register the user, please try after some time";
+
+        }
+        // await Http.PostAsync()
+    }
+
+}

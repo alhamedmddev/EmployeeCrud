@@ -1,0 +1,39 @@
+﻿@using System.Security.Claims;
+@inherits LayoutComponentBase;
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+           <AuthorizeView>
+               <Authorized>
+                    <span>@UserDisplayName(context.User.Claims.ToList())</span>
+               </Authorized>
+               <NotAuthorized>
+                    <a href="UserRegistration">LogIn</a>
+               </NotAuthorized>
+           </AuthorizeView>
+           
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+@code{
+    private string UserDisplayName(List<Claim> claims)
+    {
+        var firstName = claims.Where(u => u.Type == "FirstName").Select(u => u.Value).FirstOrDefault();
+        var lastName = claims.Where(u => u.Type == "LastName").Select(u => u.Value).FirstOrDefault();
+        if (!string.IsNullOrEmpty(lastName) || !string.IsNullOrEmpty(firstName))
+        {
+            return $"{firstName}  {lastName}";
+        }
+        var email = claims.Where(u => u.Type == "Email").Select(u => u.Value).FirstOrDefault();
+        return email;
+    }
+}
